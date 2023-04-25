@@ -3,15 +3,14 @@ import { Contract, providers, utils } from "ethers";
 import Head from "next/head";
 import React, { useEffect, useRef, useState } from "react";
 import Web3Modal from "web3modal";
-import { abi, NFT_CONTRACT_ADDRESS } from "../constants";
-import styles from "../styles/Home.module.css";
+import { abi, NFT_CONTRACT_ADDRESS } from "../constants/index";
 
 export default function Home(){
   const [walletConnected, setWalletConnected] = useState(false);
   const [presaleStarted, setPresaleStarted] = useState(false);
   const [presaleEnded, setPresaleEnded] = useState(false);
   const [loading, setLoading] = useState(false)
-  const [isOnwer, setIsOnwer] = useState(false)
+  const [isOwner, setIsOwner] = useState(false)
   const [tokenIdsMinted, setTokenIdsMinted] = useState("0");
 
   const web3ModalRef = useRef();
@@ -87,9 +86,7 @@ export default function Home(){
   const checkIfPresaleStarted = async () => {
     try {
       const provider = await getProviderOrSigner();
-
-      const nftContract = new Contract(NFT_CONTRACT_ADDRESS,abi);
-      
+      const nftContract = new Contract(NFT_CONTRACT_ADDRESS,abi,provider);
       const _presaleStarted = await nftContract.presaleStarted();
       if (!_presaleStarted){
         await getOwner();
@@ -97,7 +94,7 @@ export default function Home(){
       setPresaleStarted(_presaleStarted);
       return _presaleStarted;
     } catch (error) {
-      console.error(error);
+      console.log(error.message);
       return false
     }
   }
@@ -106,7 +103,7 @@ export default function Home(){
     try {
       const provider = await getProviderOrSigner();
 
-      const nftContract = new Contract(NFT_CONTRACT_ADDRESS, abi);
+      const nftContract = new Contract(NFT_CONTRACT_ADDRESS, abi,provider);
 
       const _presaleEnded = await nftContract.presaleEnded();
       const hasEnded = _presaleEnded.lt(Math.floor(Date.now()/1000));
@@ -128,7 +125,7 @@ export default function Home(){
     try {
       const provider = await getProviderOrSigner();
 
-      const nftContract = new Contract(NFT_CONTRACT_ADDRESS,abi);
+      const nftContract = new Contract(NFT_CONTRACT_ADDRESS,abi,provider);
 
       const _owner = await nftContract.owner();
 
@@ -136,7 +133,7 @@ export default function Home(){
 
       const address = await signer.getAddress();
       if (address.toLowerCase() === _owner.toLowerCase()){
-        setIsOnwer(true)
+        setIsOwner(true)
       }
     } catch (error) {
       console.error(error)
@@ -147,7 +144,7 @@ export default function Home(){
     try {
       const provider = await getProviderOrSigner();
 
-      const nftContract = new Contract(NFT_CONTRACT_ADDRESS,abi)
+      const nftContract = new Contract(NFT_CONTRACT_ADDRESS,abi,provider)
 
       const _tokenIds = await nftContract.tokenIds()
 
@@ -159,6 +156,8 @@ export default function Home(){
 
   const getProviderOrSigner = async (needSigner = false) => {
     const provider = await web3ModalRef.current.connect();
+    console.log("provider: " )
+    console.log(provider)
     const web3Provider = new providers.Web3Provider(provider);
 
     if (needSigner) {
@@ -169,6 +168,7 @@ export default function Home(){
   }
 
   useEffect(() => { 
+    console.log(walletConnected)
     if (!walletConnected){
       web3ModalRef.current = new Web3Modal({
         network:"sepolia",
@@ -177,11 +177,17 @@ export default function Home(){
       })
       connectWallet()
 
-      const _presaleStarted = checkIfPresaleStarted();
-      if (_presaleStarted){
-        checkIfPresaleEnded()
-      }
-
+      // const _presaleStarted = checkIfPresaleStarted();
+      // console.log("_presaleStarted:" + _presaleStarted)
+      // if (_presaleStarted){
+      //   checkIfPresaleEnded()
+      // }
+      checkIfPresaleStarted().then(_presaleStarted => {
+        console.log("_presaleStarted:" +_presaleStarted)
+        if (_presaleStarted){
+          checkIfPresaleEnded()
+        }
+      })
       getTokenIdsMinted()
       // Set an interval which gets called every 5 seconds to check presale has ended
       const presaleEndedInterval = setInterval(async function () {
@@ -205,7 +211,7 @@ export default function Home(){
     // If wallet is not connected, return a button which allows them to connect their wallet
     if (!walletConnected) {
       return (
-        <button onClick={connectWallet} className={styles.button}>
+        <button onClick={connectWallet} className="button">
           Connect your wallet
         </button>
       );
@@ -213,13 +219,13 @@ export default function Home(){
 
     // If we are currently waiting for something, return a loading button
     if (loading) {
-      return <button className={styles.button}>Loading...</button>;
+      return <button className="button">Loading...</button>;
     }
 
     // If connected user is the owner, and presale hasn't started yet, allow them to start the presale
     if (isOwner && !presaleStarted) {
       return (
-        <button className={styles.button} onClick={startPresale}>
+        <button className="button" onClick={startPresale}>
           Start Presale!
         </button>
       );
@@ -229,7 +235,7 @@ export default function Home(){
     if (!presaleStarted) {
       return (
         <div>
-          <div className={styles.description}>Presale hasn&#39;t started!</div>
+          <div className="description">Presale hasn&#39;t started!</div>
         </div>
       );
     }
@@ -238,11 +244,11 @@ export default function Home(){
     if (presaleStarted && !presaleEnded) {
       return (
         <div>
-          <div className={styles.description}>
+          <div className="description">
             Presale has started!!! If your address is whitelisted, Mint a Crypto
             Dev 🥳
           </div>
-          <button className={styles.button} onClick={presaleMint}>
+          <button className="button" onClick={presaleMint}>
             Presale Mint 🚀
           </button>
         </div>
@@ -252,7 +258,7 @@ export default function Home(){
     // If presale started and has ended, it's time for public minting
     if (presaleStarted && presaleEnded) {
       return (
-        <button className={styles.button} onClick={publicMint}>
+        <button className="button" onClick={publicMint}>
           Public Mint 🚀
         </button>
       );
@@ -266,23 +272,23 @@ export default function Home(){
         <meta name="description" content="Whitelist-Dapp" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <div className={styles.main}>
+      <div className="main">
         <div>
-          <h1 className={styles.title}>Welcome to Crypto Devs!</h1>
-          <div className={styles.description}>
+          <h1 className="title">Welcome to Crypto Devs!</h1>
+          <div className="description">
             It&#39;s an NFT collection for developers in Crypto.
           </div>
-          <div className={styles.description}>
+          <div className="description">
             {tokenIdsMinted}/20 have been minted
           </div>
           {renderButton()}
         </div>
         <div>
-          <img className={styles.image} src="./cryptodevs/0.svg" />
+          <img className="image" src="./cryptodevs/0.svg" />
         </div>
       </div>
 
-      <footer className={styles.footer}>
+      <footer className="footer">
         Made with &#10084; by Crypto Devs
       </footer>
     </div>
